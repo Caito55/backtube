@@ -1,16 +1,11 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 import requests
-import os
+from collections import defaultdict
 
 app = Flask(__name__)
 
 YOUTUBE_API_KEY = 'TU_API_KEY_AQUI'
 YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/channels'
-
-# Ruta para servir el index.html
-@app.route('/')
-def index():
-    return render_template('index.html')
 
 def get_channel_data(channel_id):
     params = {
@@ -36,8 +31,6 @@ def analyze_channel():
         views = stats.get('viewCount')
         videos = stats.get('videoCount')
 
-        # Aquí puedes agregar más lógica de análisis
-
         return jsonify({
             'subs': subs,
             'views': views,
@@ -46,6 +39,31 @@ def analyze_channel():
         })
     else:
         return jsonify({'error': 'Canal no encontrado'}), 404
+
+@app.route('/compare', methods=['POST'])
+def compare_channels():
+    data = request.json
+    channel_ids = data.get('channel_ids')
+
+    comparison = defaultdict(dict)
+    
+    for channel_id in channel_ids:
+        channel_data = get_channel_data(channel_id)
+        if 'items' in channel_data:
+            stats = channel_data['items'][0]['statistics']
+            subs = stats.get('subscriberCount')
+            views = stats.get('viewCount')
+            videos = stats.get('videoCount')
+
+            comparison[channel_id] = {
+                'subs': subs,
+                'views': views,
+                'videos': videos
+            }
+    
+    # Aquí puedes agregar más lógica de comparación
+    # Ejemplo: canal con más suscriptores, visualizaciones, etc.
+    return jsonify(comparison)
 
 if __name__ == '__main__':
     app.run(debug=True)
